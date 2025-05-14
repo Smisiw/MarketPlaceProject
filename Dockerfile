@@ -1,11 +1,12 @@
-FROM eclipse-temurin:17-jdk AS build
+# Стадия сборки
+FROM gradle:8.4-jdk17 AS build
 WORKDIR /app
 COPY . .
 RUN chmod +x gradlew
-RUN ./gradlew clean build -x test
+RUN gradle build --no-daemon
 
-FROM eclipse-temurin:17-jdk
+# Стадия запуска
+FROM eclipse-temurin:17-jdk-alpine
 VOLUME /tmp
-ARG JAR_FILE=build/libs/*.jar
-COPY --from=build ${JAR_FILE} app.jar
+COPY --from=build /app/build/libs/*.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
