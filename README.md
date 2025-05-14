@@ -37,7 +37,7 @@
 
 ## 📚 Технологии
 
-- Java 21
+- Java 17
 - Spring Boot
 - Spring Cloud
 - Spring Security
