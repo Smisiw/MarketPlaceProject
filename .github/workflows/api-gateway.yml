@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-gradle
 
       - name: Build Docker image
-        run: docker build -t axterium/api-gateway-service:latest
+        run: docker build -t axterium/api-gateway-service:latest .
 
       - name: Push Docker image
         run: docker push axterium/api-gateway-service:latest
