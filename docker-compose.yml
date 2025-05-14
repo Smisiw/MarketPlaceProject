@@ -1,0 +1,87 @@
+version: "3.8"
+services:
+  eureka-discovery-service:
+    image: axterium/eureka-discovery-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://eureka-discovery-service:8761/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway-service:
+    image: axterium/api-gateway-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://api-gateway-service:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-service:
+    image: axterium/auth-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8081:8080"
+    depends_on:
+      - auth-db
+      - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://auth-service:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+
+  product-service:
+    image: axterium/product-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8082:8080"
+    depends_on:
+      - product-db
+
+  product-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: product_db
+    ports:
+      - "5434:5432"
+
+  cart-service:
+    image: axterium/cart-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8083:8080"
+    depends_on:
+      - cart-db
+
+  cart-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cart_db
+    ports:
+      - "5435:5432"
