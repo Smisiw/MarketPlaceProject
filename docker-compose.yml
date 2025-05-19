@@ -30,11 +30,16 @@ services:
     image: axterium/auth-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
+      - JWT_EXPIRATION=604800000
+      - JWT_REFRESH_EXPIRATION=86400000
     ports:
       - "8081:8080"
     depends_on:
       - auth-db
-      - eureka-discovery-service
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://auth-service:8080/actuator/health" ]
       interval: 30s
@@ -54,6 +59,10 @@ services:
     image: axterium/product-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
     ports:
       - "8082:8080"
     depends_on:
@@ -72,6 +81,10 @@ services:
     image: axterium/cart-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://cart-db:5432/cart_db
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
     ports:
       - "8083:8080"
     depends_on:
