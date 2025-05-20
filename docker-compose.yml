@@ -4,7 +4,6 @@ services:
     image: axterium/eureka-discovery-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - EUREKA_URL=eureka-discovery-service:8761/eureka/
     ports:
       - "8761:8761"
     healthcheck:
@@ -17,6 +16,7 @@ services:
     image: axterium/api-gateway-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
     ports:
       - "8080:8080"
     depends_on:
@@ -31,7 +31,7 @@ services:
     image: axterium/auth-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - EUREKA_URL=eureka-discovery-service:8761/eureka/
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
@@ -44,7 +44,7 @@ services:
       - auth-db
       - eureka-discovery-service
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://auth-service:8080/actuator/health" ]
+      test: [ "CMD", "curl", "-f", "http://auth-service:8081/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -64,7 +64,7 @@ services:
     image: axterium/product-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - EUREKA_URL=eureka-discovery-service:8761/eureka/
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
@@ -74,6 +74,11 @@ services:
     depends_on:
       - product-db
       - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://product-service:8082/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   product-db:
     image: postgres:15
@@ -90,7 +95,7 @@ services:
     image: axterium/cart-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - EUREKA_URL=eureka-discovery-service:8761/eureka/
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://cart-db:5432/cart_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
@@ -100,8 +105,11 @@ services:
     depends_on:
       - cart-db
       - eureka-discovery-service
-    volumes:
-      - cart_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://cart-service:8083/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   cart-db:
     image: postgres:15
@@ -111,6 +119,8 @@ services:
       POSTGRES_DB: cart_db
     ports:
       - "5435:5432"
+    volumes:
+      - cart_data:/var/lib/postgresql/data
 volumes:
   auth_data:
   product_data:
