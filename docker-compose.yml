@@ -4,6 +4,7 @@ services:
     image: axterium/eureka-discovery-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=eureka-discovery-service:8761/eureka/
     ports:
       - "8761:8761"
     healthcheck:
@@ -30,6 +31,7 @@ services:
     image: axterium/auth-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
@@ -37,9 +39,10 @@ services:
       - JWT_EXPIRATION=604800000
       - JWT_REFRESH_EXPIRATION=86400000
     ports:
-      - "8081:8080"
+      - "8081:8081"
     depends_on:
       - auth-db
+      - eureka-discovery-service
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://auth-service:8080/actuator/health" ]
       interval: 30s
@@ -54,19 +57,23 @@ services:
       POSTGRES_DB: auth_db
     ports:
       - "5433:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
 
   product-service:
     image: axterium/product-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
     ports:
-      - "8082:8080"
+      - "8082:8082"
     depends_on:
       - product-db
+      - eureka-discovery-service
 
   product-db:
     image: postgres:15
@@ -76,19 +83,25 @@ services:
       POSTGRES_DB: product_db
     ports:
       - "5434:5432"
+    volumes:
+      - product_data:/var/lib/postgresql/data
 
   cart-service:
     image: axterium/cart-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://cart-db:5432/cart_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
     ports:
-      - "8083:8080"
+      - "8083:8083"
     depends_on:
       - cart-db
+      - eureka-discovery-service
+    volumes:
+      - cart_data:/var/lib/postgresql/data
 
   cart-db:
     image: postgres:15
@@ -98,3 +111,7 @@ services:
       POSTGRES_DB: cart_db
     ports:
       - "5435:5432"
+volumes:
+  auth_data:
+  product_data:
+  cart_data:
