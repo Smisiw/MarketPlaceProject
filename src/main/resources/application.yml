@@ -15,12 +15,34 @@ spring:
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
+          filters:
+            - RewritePath=/auth/v3/api-docs, /v3/api-docs
         - id: product_service
           uri: lb://PRODUCT-SERVICE
           predicates:
-            - Path=/products/**
+            - Path=/api/products/**, /api/products
           filters:
             - JwtAuthenticationFilter
+            - RewritePath=/api/products/v3/api-docs, /v3/api-docs
+        - id: cart-service
+          uri: lb://CART-SERVICE
+          predicates:
+            - Path=/api/cart/**, /api/cart
+          filters:
+            - JwtAuthenticationFilter
+            - RewritePath=/api/cart/v3/api-docs, /v3/api-docs
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Auth Service
+        url: /auth/v3/api-docs
+      - name: Product Service
+        url: /api/products/v3/api-docs
+      - name: Cart Service
+        url: /api/cart/v3/api-docs
+    path: /swagger-ui.html
+
 jwt:
   secret: ${JWT_SECRET:"nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI="}
 
