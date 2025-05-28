@@ -31,6 +31,13 @@ spring:
           filters:
             - JwtAuthenticationFilter
             - RewritePath=/api/cart/v3/api-docs, /v3/api-docs
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/orders/**, /api/orders
+          filters:
+            - JwtAuthenticationFilter
+            - RewritePath=/api/orders/v3/api-docs, /v3/api-docs
 
 springdoc:
   swagger-ui:
@@ -41,6 +48,8 @@ springdoc:
         url: /api/products/v3/api-docs
       - name: Cart Service
         url: /api/cart/v3/api-docs
+      - name: Order Service
+        url: /api/orders/v3/api-docs
     path: /swagger-ui.html
 
 jwt:
