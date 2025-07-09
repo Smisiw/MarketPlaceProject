@@ -51,6 +51,8 @@ springdoc:
       - name: Order Service
         url: /api/orders/v3/api-docs
     path: /swagger-ui.html
+    persist-authorization: true
+    display-operation-id: true
 
 jwt:
   secret: ${JWT_SECRET:"nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI="}
