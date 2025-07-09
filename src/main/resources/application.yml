@@ -14,30 +14,34 @@ spring:
         - id: auth_service
           uri: lb://AUTH-SERVICE
           predicates:
-            - Path=/auth/**
+            - Path=/auth/**, /auth/swagger-ui.html, auth/v3/api-docs
           filters:
             - RewritePath=/auth/v3/api-docs, /v3/api-docs
+            - RewritePath=/auth/swagger-ui.html, /swagger-ui.html
         - id: product_service
           uri: lb://PRODUCT-SERVICE
           predicates:
-            - Path=/api/products/**, /api/products
+            - Path=/api/products/**, /api/products, /api/products/swagger-ui.html, /api/products/v3/api-docs
           filters:
             - JwtAuthenticationFilter
             - RewritePath=/api/products/v3/api-docs, /v3/api-docs
+            - RewritePath=/api/products/swagger-ui.html, /swagger-ui.html
         - id: cart-service
           uri: lb://CART-SERVICE
           predicates:
-            - Path=/api/cart/**, /api/cart
+            - Path=/api/cart/**, /api/cart, /api/cart/swagger-ui.html, /api/cart/v3/api-docs
           filters:
             - JwtAuthenticationFilter
             - RewritePath=/api/cart/v3/api-docs, /v3/api-docs
+            - RewritePath=/api/cart/swagger-ui.html, /swagger-ui.html
         - id: order-service
           uri: lb://ORDER-SERVICE
           predicates:
-            - Path=/api/orders/**, /api/orders
+            - Path=/api/orders/**, /api/orders, /api/orders/swagger-ui.html, /api/orders/v3/api-docs
           filters:
             - JwtAuthenticationFilter
             - RewritePath=/api/orders/v3/api-docs, /v3/api-docs
+            - RewritePath=/api/orders/swagger-ui.html, /swagger-ui.html
 
 springdoc:
   swagger-ui:

@@ -11,6 +11,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - app-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.1
@@ -19,6 +21,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - app-net
 
   kafka:
     image: confluentinc/cp-kafka:7.5.1
@@ -27,10 +31,12 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
+    networks:
+      - app-net
 
   api-gateway-service:
     image: axterium/api-gateway-service:latest
@@ -46,6 +52,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - app-net
 
   auth-service:
     image: axterium/auth-service:latest
@@ -68,6 +76,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - app-net
 
   auth-db:
     image: postgres:15
@@ -79,6 +89,8 @@ services:
       - "5433:5432"
     volumes:
       - auth_data:/var/lib/postgresql/data
+    networks:
+      - app-net
 
   product-service:
     image: axterium/product-service:latest
@@ -99,6 +111,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - app-net
 
   product-db:
     image: postgres:15
@@ -110,6 +124,8 @@ services:
       - "5434:5432"
     volumes:
       - product_data:/var/lib/postgresql/data
+    networks:
+      - app-net
 
   cart-service:
     image: axterium/cart-service:latest
@@ -130,6 +146,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - app-net
 
   cart-db:
     image: postgres:15
@@ -141,6 +159,8 @@ services:
       - "5435:5432"
     volumes:
       - cart_data:/var/lib/postgresql/data
+    networks:
+      - app-net
 
   order-service:
     image: axterium/order-service:latest
@@ -157,6 +177,8 @@ services:
       - kafka
     ports:
       - "8084:8084"
+    networks:
+      - app-net
 
   order-db:
     image: postgres:15
@@ -168,9 +190,15 @@ services:
       - "5436:5432"
     volumes:
       - order_data:/var/lib/postgresql/data
+    networks:
+      - app-net
 
 volumes:
   auth_data:
   product_data:
   cart_data:
   order_data:
+
+networks:
+  app-net:
+    driver: bridge
