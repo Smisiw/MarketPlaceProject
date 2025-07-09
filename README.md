@@ -11,7 +11,7 @@
 | `api-gateway` | Единая точка входа, маршрутизация запросов | https://github.com/Smisiw/MarketPlaceProject |
 | `auth-service` | Аутентификация, авторизация пользователей, JWT | https://github.com/Smisiw/AuthService |
 | `product-service` | Управление товарами, вариациями, категориями и атрибутами | https://github.com/Smisiw/ProductService |
-| `cart-service` | Управление корзиной пользователей, слияние сессий | https://github.com/Smisiw/ProductService |
+| `cart-service` | Управление корзиной пользователей, слияние сессий | https://github.com/Smisiw/CartService |
 | `order-service` | Управление заказами и их статусами *(в процессе разработки)* | https://github.com/Smisiw/OrderService |
 | `payment-service` | Обработка и отслеживание оплат *(в процессе)* | |
 | `delivery-service` | Обработка информации о доставке *(в процессе)* | |
