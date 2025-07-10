@@ -42,6 +42,17 @@ spring:
             - JwtAuthenticationFilter
             - RewritePath=/api/orders/v3/api-docs, /v3/api-docs
             - RewritePath=/api/orders/swagger-ui.html, /swagger-ui.html
+        - id: ip-location-api
+          uri: https://suggestions.dadata.ru
+          predicates:
+            - Path=/iplocate/**
+          filters:
+            - RewritePath=/iplocate/(?<segment>.*), /suggestions/api/4_1/rs/iplocate/address/${segment}
+            - AddRequestHeader=Authorization, Token ${IP_LOCATION_API_TOKEN:0b90987355c53f84facc202bfc916630cd0c3123}
+            - AddRequestHeader=Content-Type, application/json
+            - AddRequestHeader=Accept, application/json
+
+
 
 springdoc:
   swagger-ui:
