@@ -1,4 +1,4 @@
-package ru.projects.api_gateway;
+package ru.projects.api_gateway.Filters;
 
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -8,6 +8,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import ru.projects.api_gateway.JwtValidationException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;

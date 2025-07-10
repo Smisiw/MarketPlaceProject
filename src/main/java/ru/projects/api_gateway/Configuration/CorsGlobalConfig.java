@@ -1,4 +1,4 @@
-package ru.projects.api_gateway;
+package ru.projects.api_gateway.Configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

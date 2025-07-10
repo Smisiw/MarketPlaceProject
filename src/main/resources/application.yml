@@ -23,7 +23,7 @@ spring:
           predicates:
             - Path=/api/products/**, /api/products, /api/products/swagger-ui.html, /api/products/v3/api-docs
           filters:
-            - JwtAuthenticationFilter
+            - name: JwtAuthenticationFilter
             - RewritePath=/api/products/v3/api-docs, /v3/api-docs
             - RewritePath=/api/products/swagger-ui.html, /swagger-ui.html
         - id: cart-service
@@ -31,7 +31,7 @@ spring:
           predicates:
             - Path=/api/cart/**, /api/cart, /api/cart/swagger-ui.html, /api/cart/v3/api-docs
           filters:
-            - JwtAuthenticationFilter
+            - name: JwtAuthenticationFilter
             - RewritePath=/api/cart/v3/api-docs, /v3/api-docs
             - RewritePath=/api/cart/swagger-ui.html, /swagger-ui.html
         - id: order-service
@@ -39,7 +39,7 @@ spring:
           predicates:
             - Path=/api/orders/**, /api/orders, /api/orders/swagger-ui.html, /api/orders/v3/api-docs
           filters:
-            - JwtAuthenticationFilter
+            - name: JwtAuthenticationFilter
             - RewritePath=/api/orders/v3/api-docs, /v3/api-docs
             - RewritePath=/api/orders/swagger-ui.html, /swagger-ui.html
         - id: ip-location-api
@@ -47,10 +47,11 @@ spring:
           predicates:
             - Path=/iplocate/**
           filters:
-            - RewritePath=/iplocate/(?<segment>.*), /suggestions/api/4_1/rs/iplocate/address/${segment}
+            - RewritePath=/iplocate(?<segment>.*), /suggestions/api/4_1/rs/iplocate/address${segment}
             - AddRequestHeader=Authorization, Token ${IP_LOCATION_API_TOKEN:0b90987355c53f84facc202bfc916630cd0c3123}
             - AddRequestHeader=Content-Type, application/json
             - AddRequestHeader=Accept, application/json
+            - name: AddClientIpParamFilter
 
 
 
