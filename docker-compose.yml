@@ -43,6 +43,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - IP_LOCATION_API_TOKEN=${IP_LOCATION_API_TOKEN}
     ports:
       - "8080:8080"
     depends_on:
