@@ -37,6 +37,12 @@ services:
       - zookeeper
     networks:
       - app-net
+  elasticsearch:
+    image: elasticsearch:9.0.3
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
 
   api-gateway-service:
     image: axterium/api-gateway-service:latest
