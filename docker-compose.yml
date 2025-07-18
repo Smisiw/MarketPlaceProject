@@ -31,18 +31,26 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
     networks:
       - app-net
+
   elasticsearch:
     image: elasticsearch:9.0.3
     ports:
       - "9200:9200"
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    networks:
+      - app-net
 
   api-gateway-service:
     image: axterium/api-gateway-service:latest
@@ -107,7 +115,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_ELASTICSEARCH_URIS=elasticsearch:9200
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     ports:
       - "8082:8082"
     depends_on:
@@ -143,6 +153,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     ports:
       - "8083:8083"
     depends_on:
@@ -177,7 +188,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
       - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - order-db
       - eureka-discovery-service
