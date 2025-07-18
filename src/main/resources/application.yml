@@ -21,7 +21,7 @@ spring:
         - id: product_service
           uri: lb://PRODUCT-SERVICE
           predicates:
-            - Path=/api/products/**, /api/products, /api/products/swagger-ui.html, /api/products/v3/api-docs
+            - Path=/api/products/**, /api/products, /api/products/swagger-ui.html, /api/products/v3/api-docs, /api/search/**
           filters:
             - JwtAuthenticationFilter
             - RewritePath=/api/products/v3/api-docs, /v3/api-docs
