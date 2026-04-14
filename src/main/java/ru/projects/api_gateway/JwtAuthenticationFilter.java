@@ -30,6 +30,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<Object
                     }
                 } catch (JwtValidationException e) {
                     return Mono.error(e);
+                } catch (io.jsonwebtoken.JwtException e) {
+                    return Mono.error(new JwtValidationException("Invalid or expired token"));
                 }
             }
             return chain.filter(exchange);
@@ -44,6 +46,6 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<Object
                 .parseClaimsJws(token)
                 .getBody()
                 .getExpiration();
-        return expiration.before(new Date()) && parser.isSigned(token);
+        return expiration.after(new Date());
     }
 }

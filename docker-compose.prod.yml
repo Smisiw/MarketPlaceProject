@@ -1,0 +1,270 @@
+version: "3.8"
+
+# Продакшн: образы из Docker Hub (axterium/*)
+# Требует файл .env (скопируй из .env.example и заполни секреты)
+# Запуск:  docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+# Обновление образов: docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --no-deps <service>
+
+services:
+
+  # ─── Инфраструктура ────────────────────────────────────────────────────────
+
+  eureka-discovery-service:
+    image: axterium/eureka-discovery-service:latest
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://eureka-discovery-service:8761/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - app-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    restart: unless-stopped
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+    networks:
+      - app-net
+
+  elasticsearch:
+    image: elasticsearch:9.0.3
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - app-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-net
+
+  # ─── Базы данных ────────────────────────────────────────────────────────────
+
+  auth-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  product-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: product_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  cart-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: cart_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - cart_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  order-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: order_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - order_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  # ─── Сервисы (образы из Docker Hub) ─────────────────────────────────────────
+
+  api-gateway-service:
+    image: axterium/api-gateway-service:latest
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - IP_LOCATION_API_TOKEN=${IP_LOCATION_API_TOKEN:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://api-gateway-service:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-net
+
+  auth-service:
+    image: axterium/auth-service:latest
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-86400000}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - auth-db
+      - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://auth-service:8081/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-net
+
+  product-service:
+    image: axterium/product-service:latest
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8082:8082"
+    depends_on:
+      - product-db
+      - redis
+      - elasticsearch
+      - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://product-service:8082/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-net
+
+  cart-service:
+    image: axterium/cart-service:latest
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://cart-db:5432/cart_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8083:8083"
+    depends_on:
+      - cart-db
+      - redis
+      - eureka-discovery-service
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://cart-service:8083/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-net
+
+  order-service:
+    image: axterium/order-service:latest
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://order-db:5432/order_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8084:8084"
+    depends_on:
+      - order-db
+      - kafka
+      - eureka-discovery-service
+    networks:
+      - app-net
+
+volumes:
+  auth_data:
+  product_data:
+  cart_data:
+  order_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  elasticsearch_data:
+  redis_data:
+
+networks:
+  app-net:
+    driver: bridge

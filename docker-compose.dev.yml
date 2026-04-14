@@ -1,23 +1,28 @@
 version: "3.8"
+
+# Локальная разработка: сборка из исходников + тестовые данные в БД
+# Запуск: docker compose -f docker-compose.dev.yml up --build -d
+# Сброс данных: docker compose -f docker-compose.dev.yml down -v
+
 services:
+
+  # ─── Инфраструктура ────────────────────────────────────────────────────────
+
   eureka-discovery-service:
     image: axterium/eureka-discovery-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
     ports:
       - "8761:8761"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://eureka-discovery-service:8761/actuator/health" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://eureka-discovery-service:8761/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 30s
     networks:
       - app-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.1
-    ports:
-      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -52,29 +57,93 @@ services:
     networks:
       - app-net
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+
+  # ─── Базы данных с тестовыми данными ────────────────────────────────────────
+
+  auth-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./docker/init-sql/auth:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-net
+
+  product-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: product_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./docker/init-sql/product:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-net
+
+  cart-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cart_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./docker/init-sql/cart:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-net
+
+  order-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: order_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./docker/init-sql/order:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-net
+
+  # ─── Сервисы (сборка из исходников) ────────────────────────────────────────
+
   api-gateway-service:
-    image: local/api-gateway-service:latest
     build:
       context: ../MarketPlaceProject
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
-      - IP_LOCATION_API_TOKEN=${IP_LOCATION_API_TOKEN}
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
+      - IP_LOCATION_API_TOKEN=${IP_LOCATION_API_TOKEN:-}
     ports:
       - "8080:8080"
     depends_on:
-      - eureka-discovery-service
+      eureka-discovery-service:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://api-gateway-service:8080/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
     networks:
       - app-net
 
   auth-service:
-    image: axterium/auth-service:latest
+    build:
+      context: ../AuthService
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
@@ -93,25 +162,11 @@ services:
       test: [ "CMD", "curl", "-f", "http://auth-service:8081/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
-    networks:
-      - app-net
-
-  auth-db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: auth_db
-    ports:
-      - "5433:5432"
-    volumes:
-      - auth_data:/var/lib/postgresql/data
+      retries: 5
     networks:
       - app-net
 
   product-service:
-    image: local/product-service:latest
     build:
       context: ../ProductService
     environment:
@@ -120,107 +175,72 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/product_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
-      - SPRING_ELASTICSEARCH_URIS=elasticsearch:9200
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     ports:
       - "8082:8082"
     depends_on:
       - product-db
+      - redis
+      - elasticsearch
       - eureka-discovery-service
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://product-service:8082/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
-    networks:
-      - app-net
-
-  product-db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: product_db
-    ports:
-      - "5434:5432"
-    volumes:
-      - product_data:/var/lib/postgresql/data
+      retries: 5
     networks:
       - app-net
 
   cart-service:
-    image: axterium/cart-service:latest
+    build:
+      context: ../CartService
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://cart-db:5432/cart_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     ports:
       - "8083:8083"
     depends_on:
       - cart-db
+      - redis
       - eureka-discovery-service
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://cart-service:8083/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
-    networks:
-      - app-net
-
-  cart-db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: cart_db
-    ports:
-      - "5435:5432"
-    volumes:
-      - cart_data:/var/lib/postgresql/data
+      retries: 5
     networks:
       - app-net
 
   order-service:
-    image: axterium/order-service:latest
+    build:
+      context: ../OrderService
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://order-db:5432/order_db
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
-      - EUREKA_URL=http://eureka-discovery-service:8761/eureka/
+      - JWT_SECRET=nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    depends_on:
-      - order-db
-      - eureka-discovery-service
-      - kafka
     ports:
       - "8084:8084"
+    depends_on:
+      - order-db
+      - kafka
+      - eureka-discovery-service
     networks:
       - app-net
-
-  order-db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: order_db
-    ports:
-      - "5436:5432"
-    volumes:
-      - order_data:/var/lib/postgresql/data
-    networks:
-      - app-net
-
-volumes:
-  auth_data:
-  product_data:
-  cart_data:
-  order_data:
 
 networks:
   app-net:

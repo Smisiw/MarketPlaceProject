@@ -71,7 +71,7 @@ springdoc:
     display-operation-id: true
 
 jwt:
-  secret: ${JWT_SECRET:"nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI="}
+  secret: ${JWT_SECRET:nTDmGYqtvLfDCptgzwG+xKGtXV/JHL4fHKJrxK9tHdI=}
 
 eureka:
   client:
